@@ -19,50 +19,90 @@ export default async function DashboardPage() {
       : 0
 
   const metrics = [
-    { label: 'Total savings', value: 'KES ' + totalSavings.toLocaleString(), sub: 'This month' },
-    { label: 'Active loans', value: String(loanCount ?? 0), sub: 'Outstanding' },
-    { label: 'Members', value: String(memberCount ?? 0), sub: 'All active' },
-    { label: 'Collection rate', value: collectionRate + '%', sub: 'This month' },
+    { label: 'Total savings', value: 'KES ' + totalSavings.toLocaleString(), sub: 'This month', color: '#3B6D11', bg: '#f0fdf4' },
+    { label: 'Active loans', value: String(loanCount ?? 0), sub: 'Outstanding', color: '#b45309', bg: '#fffbeb' },
+    { label: 'Members', value: String(memberCount ?? 0), sub: 'All active', color: '#1d4ed8', bg: '#eff6ff' },
+    { label: 'Collection rate', value: collectionRate + '%', sub: 'This month', color: '#3B6D11', bg: '#f0fdf4' },
   ]
 
   const links = [
-    { href: '/members', label: 'Manage members', desc: 'Add or edit members' },
-    { href: '/contributions', label: 'Contributions', desc: 'Record and collect payments' },
-    { href: '/loans', label: 'Loans', desc: 'Approve and track loans' },
-    { href: '/meetings', label: 'Meetings', desc: 'Schedule and send reminders' },
-    { href: '/reports', label: 'Reports', desc: 'View financial summaries' },
+    { href: '/members', label: 'Manage members', desc: 'Add or edit members', icon: '👥' },
+    { href: '/contributions', label: 'Contributions', desc: 'Record and collect payments', icon: '💰' },
+    { href: '/loans', label: 'Loans', desc: 'Approve and track loans', icon: '🏦' },
+    { href: '/meetings', label: 'Meetings', desc: 'Schedule and send reminders', icon: '📅' },
+    { href: '/reports', label: 'Reports', desc: 'View financial summaries', icon: '📊' },
   ]
 
   return (
     <div>
-      <div className="mb-6">
-        <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-0.5">
-          {new Date().toLocaleDateString('en-KE', { month: 'long', year: 'numeric' })}
+      {/* Header */}
+      <div className="mb-8">
+        <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a2e1a', letterSpacing: '-0.5px' }}>
+          Dashboard
+        </h1>
+        <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
+          {new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
         </p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-6">
+      {/* Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {metrics.map((m) => (
-          <div key={m.label} className="bg-white rounded-xl border border-gray-200 p-4">
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">{m.label}</p>
-            <p className="text-xl font-semibold text-gray-900">{m.value}</p>
-            <p className="text-xs text-gray-400 mt-0.5">{m.sub}</p>
+          <div key={m.label} style={{
+            background: '#ffffff',
+            borderRadius: 16,
+            padding: '20px 24px',
+            border: '1px solid #e2e8f0',
+            boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
+              {m.label}
+            </p>
+            <p style={{ fontSize: 26, fontWeight: 700, color: m.color, marginBottom: 4 }}>
+              {m.value}
+            </p>
+            <p style={{ fontSize: 12, color: '#9ca3af' }}>{m.sub}</p>
           </div>
         ))}
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-        {links.map((item) => (
-          
-            <a key={item.href}
-            href={item.href}
-            className="bg-white rounded-xl border border-gray-200 p-4 hover:border-green-300 hover:bg-green-50 transition-colors"
-          >
-            <p className="text-sm font-medium text-gray-900">{item.label}</p>
-            <p className="text-xs text-gray-500 mt-0.5">{item.desc}</p>
-          </a>
-        ))}
+      {/* Quick links */}
+      <div>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>Quick access</h2>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+          {links.map((item) => (
+            
+              < a key={item.href}
+              href={item.href}
+              style={{
+                background: '#ffffff',
+                borderRadius: 14,
+                padding: '18px 20px',
+                border: '1px solid #e2e8f0',
+                textDecoration: 'none',
+                display: 'block',
+                boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                transition: 'all 0.2s',
+              }}
+              onMouseOver={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.borderColor = '#3B6D11'
+                el.style.boxShadow = '0 4px 12px rgba(59,109,17,0.1)'
+                el.style.transform = 'translateY(-1px)'
+              }}
+              onMouseOut={e => {
+                const el = e.currentTarget as HTMLElement
+                el.style.borderColor = '#e2e8f0'
+                el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
+                el.style.transform = 'translateY(0)'
+              }}
+            >
+              <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>
+              <p style={{ fontSize: 14, fontWeight: 600, color: '#1a2e1a', marginBottom: 4 }}>{item.label}</p>
+              <p style={{ fontSize: 12, color: '#9ca3af' }}>{item.desc}</p>
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   )
