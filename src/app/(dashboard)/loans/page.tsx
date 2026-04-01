@@ -1,7 +1,18 @@
 import { createServerSupabase } from '@/lib/supabase/server'
+import LoanApprovalButton from '@/components/loans/loan-approval-button'
 
 export default async function LoansPage() {
   const supabase = await createServerSupabase()
+
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data: currentMember } = await supabase
+    .from('members')
+    .select('role')
+    .eq('user_id', user!.id)
+    .single()
+
+  const canApprove = ['chairperson', 'treasurer'].includes(currentMember?.role ?? '')
 
   const { data: loans, error } = await supabase
     .from('loans')
@@ -15,146 +26,184 @@ export default async function LoansPage() {
     return <p className="text-sm text-red-500">Failed to load loans.</p>
   }
 
-  const totalDisbursed =
-    loans?.reduce((sum, l) => sum + l.amount, 0) ?? 0
-  const totalOutstanding =
-    loans
-      ?.filter((l) => l.status === 'active')
-      .reduce((sum, l) => sum + l.balance, 0) ?? 0
-  const totalPending =
-    loans?.filter((l) => l.status === 'pending').length ?? 0
+  const totalDisbursed = loans?.filter((l) => l.status === 'active').reduce((sum, l) => sum + l.amount, 0) ?? 0
+  const totalOutstanding = loans?.filter((l) => l.status === 'active').reduce((sum, l) => sum + l.balance, 0) ?? 0
+  const pending = loans?.filter((l) => l.status === 'pending') ?? []
+  const active = loans?.filter((l) => l.status === 'active') ?? []
 
   return (
     <div>
-      <div className="flex items-center justify-between mb-6">
+      <div className="flex items-center justify-between mb-8">
         <div>
-          <h1 className="text-lg font-semibold text-gray-900">Loans</h1>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a2e1a', letterSpacing: '-0.5px' }}>
+            Loans
+          </h1>
+          <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
             {loans?.length ?? 0} total loans
           </p>
         </div>
+        
+          < a href="/loans/new"
+          style={{
+            padding: '10px 20px',
+            background: 'linear-gradient(135deg, #3B6D11, #639922)',
+            color: '#ffffff', borderRadius: 10, fontSize: 14, fontWeight: 600, textDecoration: 'none',
+          }}
+        >
+          + Request loan
+        </a>
       </div>
 
-      {/* Metrics */}
-      <div className="grid grid-cols-3 gap-3 mb-6">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
-          { label: 'Total disbursed', value: 'KES ' + totalDisbursed.toLocaleString() },
-          { label: 'Outstanding', value: 'KES ' + totalOutstanding.toLocaleString(), amber: true },
-          { label: 'Pending approval', value: String(totalPending), amber: totalPending > 0 },
+          { label: 'Total disbursed', value: 'KES ' + totalDisbursed.toLocaleString(), color: '#1a2e1a' },
+          { label: 'Outstanding', value: 'KES ' + totalOutstanding.toLocaleString(), color: '#b45309' },
+          { label: 'Pending approval', value: String(pending.length), color: pending.length > 0 ? '#b45309' : '#1a2e1a' },
         ].map((m) => (
-          <div
-            key={m.label}
-            className="bg-white rounded-xl border border-gray-200 p-4"
-          >
-            <p className="text-xs text-gray-500 uppercase tracking-wide mb-1">
+          <div key={m.label} style={{
+            background: '#ffffff', borderRadius: 16, padding: '20px 24px',
+            border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+          }}>
+            <p style={{ fontSize: 11, fontWeight: 600, color: '#9ca3af', textTransform: 'uppercase', letterSpacing: '0.08em', marginBottom: 8 }}>
               {m.label}
             </p>
-            <p
-              className={`text-xl font-semibold ${
-                m.amber ? 'text-amber-600' : 'text-gray-900'
-              }`}
-            >
-              {m.value}
-            </p>
+            <p style={{ fontSize: 26, fontWeight: 700, color: m.color }}>{m.value}</p>
           </div>
         ))}
       </div>
 
-      {/* Loans list */}
-      <div className="space-y-3">
-        {loans && loans.length > 0 ? (
-          loans.map((loan) => {
-            const repaid = loan.amount - loan.balance
-            const pct =
-              loan.amount > 0
-                ? Math.round((repaid / loan.amount) * 100)
-                : 0
-            const member = loan.members as any
+      <div style={{
+        display: 'inline-flex', alignItems: 'center', gap: 8,
+        padding: '8px 16px', borderRadius: 100, marginBottom: 20,
+        background: canApprove ? '#f0fdf4' : '#f8fafc',
+        border: `1px solid ${canApprove ? '#bbf7d0' : '#e2e8f0'}`,
+      }}>
+        <div style={{
+          width: 8, height: 8, borderRadius: '50%',
+          background: canApprove ? '#3B6D11' : '#9ca3af',
+        }} />
+        <span style={{ fontSize: 13, fontWeight: 500, color: canApprove ? '#3B6D11' : '#6b7280' }}>
+          {canApprove
+            ? `You can approve loans (${currentMember?.role})`
+            : `You cannot approve loans (${currentMember?.role ?? 'no role'})`}
+        </span>
+      </div>
 
-            return (
-              <div
-                key={loan.id}
-                className="bg-white rounded-xl border border-gray-200 p-4"
-              >
-                <div className="flex items-start justify-between mb-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-9 h-9 rounded-full bg-green-100 flex items-center justify-center text-xs font-medium text-green-700">
-                      {member?.full_name
-                        .split(' ')
-                        .map((n: string) => n[0])
-                        .join('')
-                        .slice(0, 2)
-                        .toUpperCase()}
+      {pending.length > 0 && (
+        <div style={{ marginBottom: 24 }}>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+            Pending approval ({pending.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {pending.map((loan) => {
+              const member = loan.members as any
+              return (
+                <div key={loan.id} style={{
+                  background: '#fffbeb', borderRadius: 16, padding: '20px 24px',
+                  border: '1px solid #fde68a', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #3B6D11, #639922)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+                    }}>
+                      {member?.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <p className="font-medium text-gray-900 text-sm">
-                        {member?.full_name}
+                      <p style={{ fontWeight: 600, color: '#1a2e1a', fontSize: 14 }}>{member?.full_name}</p>
+                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                        KES {loan.amount.toLocaleString()} · {loan.rate}% interest · {loan.purpose}
                       </p>
-                      <p className="text-xs text-gray-500">
+                    </div>
+                  </div>
+                  <LoanApprovalButton id={loan.id} canApprove={canApprove} />
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+          Active loans ({active.length})
+        </h2>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          {active.length > 0 ? active.map((loan) => {
+            const member = loan.members as any
+            const repaid = loan.amount - loan.balance
+            const pct = loan.amount > 0 ? Math.round((repaid / loan.amount) * 100) : 0
+            return (
+              <div key={loan.id} style={{
+                background: '#ffffff', borderRadius: 16, padding: '20px 24px',
+                border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+              }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 16 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: '50%',
+                      background: 'linear-gradient(135deg, #3B6D11, #639922)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 13, fontWeight: 700, color: '#fff', flexShrink: 0,
+                    }}>
+                      {member?.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 600, color: '#1a2e1a', fontSize: 14 }}>{member?.full_name}</p>
+                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
                         {loan.purpose} · {loan.rate}% interest
                       </p>
                     </div>
                   </div>
-                  <span
-                    className={`inline-block px-2 py-0.5 rounded-full text-xs font-medium ${
-                      loan.status === 'active'
-                        ? 'bg-green-50 text-green-700'
-                        : loan.status === 'pending'
-                        ? 'bg-amber-50 text-amber-600'
-                        : 'bg-gray-100 text-gray-500'
-                    }`}
-                  >
-                    {loan.status}
+                  <span style={{
+                    padding: '4px 12px', borderRadius: 100, fontSize: 12, fontWeight: 500,
+                    background: '#f0fdf4', color: '#3B6D11',
+                  }}>
+                    Active
                   </span>
                 </div>
 
-                <div className="grid grid-cols-3 gap-3 mb-3 text-sm">
-                  <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Principal</p>
-                    <p className="font-medium text-gray-900">
-                      KES {loan.amount.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Balance</p>
-                    <p className="font-medium text-amber-600">
-                      KES {loan.balance.toLocaleString()}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-gray-500 mb-0.5">Disbursed</p>
-                    <p className="font-medium text-gray-900">
-                      {loan.disbursed_at
-                        ? new Date(loan.disbursed_at).toLocaleDateString(
-                            'en-KE',
-                            { day: 'numeric', month: 'short', year: 'numeric' }
-                          )
-                        : '—'}
-                    </p>
-                  </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                  {[
+                    { label: 'Principal', value: 'KES ' + loan.amount.toLocaleString() },
+                    { label: 'Balance', value: 'KES ' + loan.balance.toLocaleString(), amber: true },
+                    { label: 'Disbursed', value: loan.disbursed_at ? new Date(loan.disbursed_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
+                  ].map((item) => (
+                    <div key={item.label}>
+                      <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>{item.label}</p>
+                      <p style={{ fontSize: 14, fontWeight: 600, color: (item as any).amber ? '#b45309' : '#1a2e1a' }}>
+                        {item.value}
+                      </p>
+                    </div>
+                  ))}
                 </div>
 
-                {/* Repayment progress */}
                 <div>
-                  <div className="flex justify-between text-xs text-gray-500 mb-1">
+                  <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>
                     <span>Repaid</span>
                     <span>{pct}%</span>
                   </div>
-                  <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-green-600 rounded-full"
-                      style={{ width: pct + '%' }}
-                    />
+                  <div style={{ height: 6, background: '#f1f5f9', borderRadius: 100, overflow: 'hidden' }}>
+                    <div style={{
+                      height: '100%', width: pct + '%',
+                      background: 'linear-gradient(90deg, #3B6D11, #639922)', borderRadius: 100,
+                    }} />
                   </div>
                 </div>
               </div>
             )
-          })
-        ) : (
-          <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-sm text-gray-400">
-            No loans recorded yet.
-          </div>
-        )}
+          }) : (
+            <div style={{
+              background: '#ffffff', borderRadius: 16, padding: '48px 24px',
+              border: '1px solid #e2e8f0', textAlign: 'center', color: '#9ca3af', fontSize: 14,
+            }}>
+              No active loans yet.
+            </div>
+          )}
+        </div>
       </div>
     </div>
   )
