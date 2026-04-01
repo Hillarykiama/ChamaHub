@@ -1,3 +1,4 @@
+
 import { createServerSupabase } from '@/lib/supabase/server'
 
 export default async function DashboardPage() {
@@ -19,10 +20,10 @@ export default async function DashboardPage() {
       : 0
 
   const metrics = [
-    { label: 'Total savings', value: 'KES ' + totalSavings.toLocaleString(), sub: 'This month', color: '#3B6D11', bg: '#f0fdf4' },
-    { label: 'Active loans', value: String(loanCount ?? 0), sub: 'Outstanding', color: '#b45309', bg: '#fffbeb' },
-    { label: 'Members', value: String(memberCount ?? 0), sub: 'All active', color: '#1d4ed8', bg: '#eff6ff' },
-    { label: 'Collection rate', value: collectionRate + '%', sub: 'This month', color: '#3B6D11', bg: '#f0fdf4' },
+    { label: 'Total savings', value: 'KES ' + totalSavings.toLocaleString(), sub: 'This month', color: '#3B6D11' },
+    { label: 'Active loans', value: String(loanCount ?? 0), sub: 'Outstanding', color: '#b45309' },
+    { label: 'Members', value: String(memberCount ?? 0), sub: 'All active', color: '#1d4ed8' },
+    { label: 'Collection rate', value: collectionRate + '%', sub: 'This month', color: '#3B6D11' },
   ]
 
   const links = [
@@ -35,13 +36,14 @@ export default async function DashboardPage() {
 
   return (
     <div>
-      {/* Header */}
       <div className="mb-8">
         <h1 style={{ fontSize: 24, fontWeight: 700, color: '#1a2e1a', letterSpacing: '-0.5px' }}>
           Dashboard
         </h1>
         <p style={{ fontSize: 14, color: '#6b7280', marginTop: 4 }}>
-          {new Date().toLocaleDateString('en-KE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}
+          {new Date().toLocaleDateString('en-KE', {
+            weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+          })}
         </p>
       </div>
 
@@ -68,12 +70,15 @@ export default async function DashboardPage() {
 
       {/* Quick links */}
       <div>
-        <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>Quick access</h2>
+        <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+          Quick access
+        </h2>
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
           {links.map((item) => (
             
-              < a key={item.href}
+             < a key={item.href}
               href={item.href}
+              className="hover:border-green-400 hover:bg-green-50 transition-all"
               style={{
                 background: '#ffffff',
                 borderRadius: 14,
@@ -82,25 +87,12 @@ export default async function DashboardPage() {
                 textDecoration: 'none',
                 display: 'block',
                 boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                transition: 'all 0.2s',
-              }}
-              onMouseOver={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.borderColor = '#3B6D11'
-                el.style.boxShadow = '0 4px 12px rgba(59,109,17,0.1)'
-                el.style.transform = 'translateY(-1px)'
-              }}
-              onMouseOut={e => {
-                const el = e.currentTarget as HTMLElement
-                el.style.borderColor = '#e2e8f0'
-                el.style.boxShadow = '0 1px 3px rgba(0,0,0,0.04)'
-                el.style.transform = 'translateY(0)'
               }}
             >
               <div style={{ fontSize: 22, marginBottom: 8 }}>{item.icon}</div>
               <p style={{ fontSize: 14, fontWeight: 600, color: '#1a2e1a', marginBottom: 4 }}>{item.label}</p>
               <p style={{ fontSize: 12, color: '#9ca3af' }}>{item.desc}</p>
-            </a>
+              </a>  
           ))}
         </div>
       </div>
