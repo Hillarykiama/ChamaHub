@@ -7,9 +7,11 @@ import { createBrowserSupabase } from '@/lib/supabase/client'
 export default function LoanApprovalButton({
   id,
   canApprove,
+  isOwnLoan,
 }: {
   id: string
   canApprove: boolean
+  isOwnLoan?: boolean
 }) {
   const [loading, setLoading] = useState(false)
   const router = useRouter()
@@ -33,6 +35,17 @@ export default function LoanApprovalButton({
     await supabase.from('loans').delete().eq('id', id)
     router.refresh()
     setLoading(false)
+  }
+
+  if (isOwnLoan) {
+    return (
+      <span style={{
+        padding: '8px 16px', borderRadius: 8, fontSize: 13, fontWeight: 500,
+        background: '#fef2f2', color: '#dc2626', border: '1px solid #fecaca',
+      }}>
+        Cannot approve own loan
+      </span>
+    )
   }
 
   if (!canApprove) {

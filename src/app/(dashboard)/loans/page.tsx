@@ -6,13 +6,13 @@ export default async function LoansPage() {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  const { data: currentMember } = await supabase
+  const { data: currentMemberFull } = await supabase
     .from('members')
-    .select('role')
+    .select('id, role')
     .eq('user_id', user!.id)
     .single()
 
-  const canApprove = ['chairperson', 'treasurer'].includes(currentMember?.role ?? '')
+  const canApprove = ['chairperson', 'treasurer'].includes(currentMemberFull?.role ?? '')
 
   const { data: loans, error } = await supabase
     .from('loans')
@@ -43,7 +43,7 @@ export default async function LoansPage() {
           </p>
         </div>
         
-          < a href="/loans/new"
+         <a  href="/loans/new"
           style={{
             padding: '10px 20px',
             background: 'linear-gradient(135deg, #3B6D11, #639922)',
@@ -84,8 +84,8 @@ export default async function LoansPage() {
         }} />
         <span style={{ fontSize: 13, fontWeight: 500, color: canApprove ? '#3B6D11' : '#6b7280' }}>
           {canApprove
-            ? `You can approve loans (${currentMember?.role})`
-            : `You cannot approve loans (${currentMember?.role ?? 'no role'})`}
+            ? `You can approve loans (${currentMemberFull?.role})`
+            : `You cannot approve loans (${currentMemberFull?.role ?? 'no role'})`}
         </span>
       </div>
 
@@ -97,6 +97,7 @@ export default async function LoansPage() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {pending.map((loan) => {
               const member = loan.members as any
+              const isOwnLoan = member?.id === currentMemberFull?.id
               return (
                 <div key={loan.id} style={{
                   background: '#fffbeb', borderRadius: 16, padding: '20px 24px',
@@ -119,7 +120,11 @@ export default async function LoansPage() {
                       </p>
                     </div>
                   </div>
-                  <LoanApprovalButton id={loan.id} canApprove={canApprove} />
+                  <LoanApprovalButton
+                    id={loan.id}
+                    canApprove={canApprove && !isOwnLoan}
+                    isOwnLoan={isOwnLoan}
+                  />
                 </div>
               )
             })}
