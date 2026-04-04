@@ -1,5 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server'
 import LoanApprovalButton from '@/components/loans/loan-approval-button'
+import RecordRepaymentButton from '@/components/loans/record-repayment-button'
+import LoanSchedule from '@/components/loans/loan-schedule'
 
 export default async function LoansPage() {
   const supabase = await createServerSupabase()
@@ -17,7 +19,7 @@ export default async function LoansPage() {
   const { data: loans, error } = await supabase
     .from('loans')
     .select(`
-      id, amount, balance, rate, purpose, status, disbursed_at,
+      id, amount, balance, rate, purpose, status, disbursed_at, duration,
       members(id, full_name, phone)
     `)
     .order('disbursed_at', { ascending: false })
@@ -30,6 +32,7 @@ export default async function LoansPage() {
   const totalOutstanding = loans?.filter((l) => l.status === 'active').reduce((sum, l) => sum + l.balance, 0) ?? 0
   const pending = loans?.filter((l) => l.status === 'pending') ?? []
   const active = loans?.filter((l) => l.status === 'active') ?? []
+  const paid = loans?.filter((l) => l.status === 'paid') ?? []
 
   return (
     <div>
@@ -43,7 +46,7 @@ export default async function LoansPage() {
           </p>
         </div>
         
-         <a  href="/loans/new"
+          < a href="/loans/new"
           style={{
             padding: '10px 20px',
             background: 'linear-gradient(135deg, #3B6D11, #639922)',
@@ -54,11 +57,13 @@ export default async function LoansPage() {
         </a>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 16, marginBottom: 24 }}>
+      {/* Metrics */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
         {[
           { label: 'Total disbursed', value: 'KES ' + totalDisbursed.toLocaleString(), color: '#1a2e1a' },
           { label: 'Outstanding', value: 'KES ' + totalOutstanding.toLocaleString(), color: '#b45309' },
           { label: 'Pending approval', value: String(pending.length), color: pending.length > 0 ? '#b45309' : '#1a2e1a' },
+          { label: 'Fully paid', value: String(paid.length), color: '#3B6D11' },
         ].map((m) => (
           <div key={m.label} style={{
             background: '#ffffff', borderRadius: 16, padding: '20px 24px',
@@ -72,16 +77,14 @@ export default async function LoansPage() {
         ))}
       </div>
 
+      {/* Role indicator */}
       <div style={{
         display: 'inline-flex', alignItems: 'center', gap: 8,
         padding: '8px 16px', borderRadius: 100, marginBottom: 20,
         background: canApprove ? '#f0fdf4' : '#f8fafc',
         border: `1px solid ${canApprove ? '#bbf7d0' : '#e2e8f0'}`,
       }}>
-        <div style={{
-          width: 8, height: 8, borderRadius: '50%',
-          background: canApprove ? '#3B6D11' : '#9ca3af',
-        }} />
+        <div style={{ width: 8, height: 8, borderRadius: '50%', background: canApprove ? '#3B6D11' : '#9ca3af' }} />
         <span style={{ fontSize: 13, fontWeight: 500, color: canApprove ? '#3B6D11' : '#6b7280' }}>
           {canApprove
             ? `You can approve loans (${currentMemberFull?.role})`
@@ -89,6 +92,7 @@ export default async function LoansPage() {
         </span>
       </div>
 
+      {/* Pending */}
       {pending.length > 0 && (
         <div style={{ marginBottom: 24 }}>
           <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
@@ -116,7 +120,7 @@ export default async function LoansPage() {
                     <div>
                       <p style={{ fontWeight: 600, color: '#1a2e1a', fontSize: 14 }}>{member?.full_name}</p>
                       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                        KES {loan.amount.toLocaleString()} · {loan.rate}% interest · {loan.purpose}
+                        KES {loan.amount.toLocaleString()} · {loan.rate}% flat interest · {loan.duration} months · {loan.purpose}
                       </p>
                     </div>
                   </div>
@@ -124,6 +128,10 @@ export default async function LoansPage() {
                     id={loan.id}
                     canApprove={canApprove && !isOwnLoan}
                     isOwnLoan={isOwnLoan}
+                    amount={loan.amount}
+                    rate={loan.rate}
+                    memberPhone={member?.phone}
+                    memberName={member?.full_name}
                   />
                 </div>
               )
@@ -132,15 +140,17 @@ export default async function LoansPage() {
         </div>
       )}
 
-      <div>
+      {/* Active loans */}
+      <div style={{ marginBottom: 24 }}>
         <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
           Active loans ({active.length})
         </h2>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           {active.length > 0 ? active.map((loan) => {
             const member = loan.members as any
-            const repaid = loan.amount - loan.balance
-            const pct = loan.amount > 0 ? Math.round((repaid / loan.amount) * 100) : 0
+            const totalRepayable = Math.ceil(loan.amount * (1 + loan.rate / 100))
+            const repaid = totalRepayable - loan.balance
+            const pct = totalRepayable > 0 ? Math.round((repaid / totalRepayable) * 100) : 0
             return (
               <div key={loan.id} style={{
                 background: '#ffffff', borderRadius: 16, padding: '20px 24px',
@@ -159,7 +169,7 @@ export default async function LoansPage() {
                     <div>
                       <p style={{ fontWeight: 600, color: '#1a2e1a', fontSize: 14 }}>{member?.full_name}</p>
                       <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
-                        {loan.purpose} · {loan.rate}% interest
+                        {loan.purpose} · {loan.rate}% flat interest · {loan.duration ?? 3} months
                       </p>
                     </div>
                   </div>
@@ -171,24 +181,25 @@ export default async function LoansPage() {
                   </span>
                 </div>
 
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12, marginBottom: 16 }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12, marginBottom: 16 }}>
                   {[
                     { label: 'Principal', value: 'KES ' + loan.amount.toLocaleString() },
+                    { label: 'Total repayable', value: 'KES ' + totalRepayable.toLocaleString() },
+                    { label: 'Already paid', value: 'KES ' + repaid.toLocaleString(), green: true },
                     { label: 'Balance', value: 'KES ' + loan.balance.toLocaleString(), amber: true },
-                    { label: 'Disbursed', value: loan.disbursed_at ? new Date(loan.disbursed_at).toLocaleDateString('en-KE', { day: 'numeric', month: 'short', year: 'numeric' }) : '—' },
                   ].map((item) => (
                     <div key={item.label}>
                       <p style={{ fontSize: 11, color: '#9ca3af', marginBottom: 4 }}>{item.label}</p>
-                      <p style={{ fontSize: 14, fontWeight: 600, color: (item as any).amber ? '#b45309' : '#1a2e1a' }}>
+                      <p style={{ fontSize: 13, fontWeight: 600, color: (item as any).amber ? '#b45309' : (item as any).green ? '#3B6D11' : '#1a2e1a' }}>
                         {item.value}
                       </p>
                     </div>
                   ))}
                 </div>
 
-                <div>
+                <div style={{ marginBottom: 16 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, color: '#9ca3af', marginBottom: 6 }}>
-                    <span>Repaid</span>
+                    <span>Repayment progress</span>
                     <span>{pct}%</span>
                   </div>
                   <div style={{ height: 6, background: '#f1f5f9', borderRadius: 100, overflow: 'hidden' }}>
@@ -198,6 +209,18 @@ export default async function LoansPage() {
                     }} />
                   </div>
                 </div>
+
+                <RecordRepaymentButton
+                  loanId={loan.id}
+                  currentBalance={loan.balance}
+                  totalRepayable={totalRepayable}
+                  memberName={member?.full_name}
+                />
+
+                <LoanSchedule
+                  loanId={loan.id}
+                  totalRepayable={totalRepayable}
+                />
               </div>
             )
           }) : (
@@ -210,6 +233,56 @@ export default async function LoansPage() {
           )}
         </div>
       </div>
+
+      {/* Paid loans */}
+      {paid.length > 0 && (
+        <div>
+          <h2 style={{ fontSize: 14, fontWeight: 600, color: '#374151', marginBottom: 12 }}>
+            Fully paid ({paid.length})
+          </h2>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+            {paid.map((loan) => {
+              const member = loan.members as any
+              const totalRepayable = Math.ceil(loan.amount * (1 + loan.rate / 100))
+              return (
+                <div key={loan.id} style={{
+                  background: '#f0fdf4', borderRadius: 16, padding: '16px 24px',
+                  border: '1px solid #bbf7d0', boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
+                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                    <div style={{
+                      width: 36, height: 36, borderRadius: '50%',
+                      background: '#3B6D11',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0,
+                    }}>
+                      {member?.full_name.split(' ').map((n: string) => n[0]).join('').slice(0, 2).toUpperCase()}
+                    </div>
+                    <div>
+                      <p style={{ fontWeight: 600, color: '#1a2e1a', fontSize: 14 }}>{member?.full_name}</p>
+                      <p style={{ fontSize: 12, color: '#6b7280', marginTop: 2 }}>
+                        KES {loan.amount.toLocaleString()} · {loan.purpose}
+                      </p>
+                    </div>
+                  </div>
+                  <div style={{ textAlign: 'right' }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, color: '#3B6D11' }}>
+                      KES {totalRepayable.toLocaleString()} paid
+                    </p>
+                    <span style={{
+                      fontSize: 11, fontWeight: 600, padding: '3px 10px',
+                      borderRadius: 100, background: '#3B6D11', color: '#fff',
+                    }}>
+                      Cleared
+                    </span>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </div>
   )
 }
