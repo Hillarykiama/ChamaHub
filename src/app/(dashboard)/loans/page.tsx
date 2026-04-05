@@ -220,6 +220,7 @@ export default async function LoansPage() {
                 <LoanSchedule
                   loanId={loan.id}
                   totalRepayable={totalRepayable}
+                  memberPhone={member?.phone}
                 />
               </div>
             )

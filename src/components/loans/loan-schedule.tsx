@@ -6,13 +6,17 @@ import { createBrowserSupabase } from '@/lib/supabase/client'
 export default function LoanSchedule({
   loanId,
   totalRepayable,
+  memberPhone,
 }: {
   loanId: string
   totalRepayable: number
+  memberPhone: string
 }) {
   const [schedules, setSchedules] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [paying, setPaying] = useState<string | null>(null)
+  const [message, setMessage] = useState('')
+  const router_refresh = () => window.location.reload()
 
   async function fetchSchedules() {
     const supabase = createBrowserSupabase()
@@ -27,28 +31,40 @@ export default function LoanSchedule({
 
   useEffect(() => { fetchSchedules() }, [loanId])
 
-  async function handleSTKPush(scheduleId: string, amountDue: number, phone: string) {
+  async function handleSTKPush(scheduleId: string, amountDue: number, amountPaid: number) {
+    const remaining = amountDue - amountPaid
+    if (remaining <= 0) return
+
+    // Format phone — ensure it starts with 254
+    const phone = memberPhone.startsWith('0')
+      ? '254' + memberPhone.slice(1)
+      : memberPhone.startsWith('+')
+      ? memberPhone.slice(1)
+      : memberPhone
+
     setPaying(scheduleId)
+    setMessage('')
+
     try {
       const res = await fetch('/api/mpesa/stk-push', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           phone,
-          amount: amountDue,
-          scheduleId,
-          loanId,
+          amount: remaining,
+          memberId: loanId,
+          chamaId: loanId,
           period: scheduleId,
         }),
       })
       const data = await res.json()
       if (data.success) {
-        alert('M-Pesa prompt sent to your phone. Complete payment to confirm.')
+        setMessage('M-Pesa prompt sent! Complete payment on your phone.')
       } else {
-        alert('STK Push failed: ' + (data.error ?? 'Unknown error'))
+        setMessage('STK Push failed: ' + (data.error ?? 'Unknown error'))
       }
     } catch (e) {
-      alert('Failed to send M-Pesa prompt')
+      setMessage('Failed to send M-Pesa prompt. Check your connection.')
     }
     setPaying(null)
   }
@@ -74,10 +90,22 @@ export default function LoanSchedule({
         </span>
       </div>
 
+      {message && (
+        <div style={{
+          padding: '10px 14px', borderRadius: 8, marginBottom: 12, fontSize: 13,
+          background: message.includes('failed') || message.includes('Failed') ? '#fef2f2' : '#f0fdf4',
+          color: message.includes('failed') || message.includes('Failed') ? '#dc2626' : '#3B6D11',
+          border: `1px solid ${message.includes('failed') || message.includes('Failed') ? '#fecaca' : '#bbf7d0'}`,
+        }}>
+          {message}
+        </div>
+      )}
+
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {schedules.map((s) => {
           const isPaid = s.status === 'paid'
           const isOverdue = !isPaid && new Date(s.due_date) < new Date()
+          const remaining = s.amount_due - (s.amount_paid ?? 0)
 
           return (
             <div key={s.id} style={{
@@ -89,12 +117,17 @@ export default function LoanSchedule({
               <div>
                 <p style={{ fontSize: 13, fontWeight: 600, color: '#1a2e1a' }}>
                   Month {s.month_number}
+                  {isOverdue && !isPaid && (
+                    <span style={{ marginLeft: 8, fontSize: 11, color: '#dc2626', fontWeight: 500 }}>
+                      Overdue
+                    </span>
+                  )}
                 </p>
                 <p style={{ fontSize: 11, color: '#6b7280', marginTop: 2 }}>
                   Due: {new Date(s.due_date).toLocaleDateString('en-KE', {
-                    day: 'numeric', month: 'short', year: 'numeric'
+                    day: 'numeric', month: 'short', year: 'numeric',
                   })}
-                  {s.mpesa_ref && ` · ${s.mpesa_ref}`}
+                  {s.mpesa_ref && ` · Ref: ${s.mpesa_ref}`}
                 </p>
               </div>
 
@@ -105,7 +138,7 @@ export default function LoanSchedule({
                   </p>
                   {s.amount_paid > 0 && !isPaid && (
                     <p style={{ fontSize: 11, color: '#b45309' }}>
-                      Partial: KES {s.amount_paid.toLocaleString()}
+                      Paid: KES {s.amount_paid.toLocaleString()} · Rem: KES {remaining.toLocaleString()}
                     </p>
                   )}
                 </div>
@@ -119,13 +152,15 @@ export default function LoanSchedule({
                   </span>
                 ) : (
                   <button
-                    onClick={() => handleSTKPush(s.id, s.amount_due - s.amount_paid, '254712345678')}
+                    onClick={() => handleSTKPush(s.id, s.amount_due, s.amount_paid ?? 0)}
                     disabled={paying === s.id}
                     style={{
-                      padding: '6px 12px', borderRadius: 8, fontSize: 11, fontWeight: 600,
-                      background: isOverdue ? '#fef2f2' : 'linear-gradient(135deg, #3B6D11, #639922)',
-                      color: isOverdue ? '#dc2626' : '#ffffff',
-                      border: isOverdue ? '1px solid #fecaca' : 'none',
+                      padding: '6px 14px', borderRadius: 8, fontSize: 12, fontWeight: 600,
+                      background: paying === s.id ? '#9ca3af' : isOverdue
+                        ? '#dc2626'
+                        : 'linear-gradient(135deg, #3B6D11, #639922)',
+                      color: '#ffffff',
+                      border: 'none',
                       cursor: paying === s.id ? 'not-allowed' : 'pointer',
                       fontFamily: 'Inter, sans-serif',
                     }}
