@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server'
 
 export async function getContributions(chamaId: string, period: string) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('contributions')
     .select(`
@@ -25,7 +25,7 @@ export async function recordContribution(contribution: {
   mpesa_ref?: string
   paid_at?: string
 }) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('contributions')
     .insert(contribution)
@@ -40,7 +40,7 @@ export async function markContributionPaid(
   id: string,
   mpesaRef: string
 ) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('contributions')
     .update({

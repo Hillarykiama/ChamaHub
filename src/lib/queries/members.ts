@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server'
 
 export async function getMembers(chamaId: string) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('members')
     .select(`
@@ -22,7 +22,7 @@ export async function addMember(member: {
   role: string
   joined_at: string
 }) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('members')
     .insert(member)

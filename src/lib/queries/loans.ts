@@ -1,7 +1,7 @@
 import { createServerSupabase } from '@/lib/supabase/server'
 
 export async function getLoans(chamaId: string) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('loans')
     .select(`
@@ -24,7 +24,7 @@ export async function createLoan(loan: {
   purpose: string
   status: string
 }) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('loans')
     .insert(loan)
@@ -39,7 +39,7 @@ export async function updateLoanBalance(
   id: string,
   newBalance: number
 ) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('loans')
     .update({
@@ -55,7 +55,7 @@ export async function updateLoanBalance(
 }
 
 export async function approveLoan(id: string) {
-  const supabase = createServerSupabase()
+  const supabase = await createServerSupabase()
   const { data, error } = await supabase
     .from('loans')
     .update({
