@@ -4,7 +4,7 @@ import { createServerSupabase } from '@/lib/supabase/server'
 
 export async function POST(req: Request) {
   try {
-    const { phone, amount, memberId, chamaId, period, scheduleId, loanId } = await req.json()
+    const { phone, amount, memberId, chamaId, period, scheduleId, loanId, contributionId } = await req.json()
 
     if (!phone || !amount) {
       return NextResponse.json(
@@ -22,14 +22,13 @@ export async function POST(req: Request) {
       phone,
       amount,
       accountRef: 'CHAMAHUB',
-      description: 'Loan repayment',
+      description: contributionId ? 'Monthly contribution' : 'Loan repayment',
     })
 
     const checkoutRequestId = result.CheckoutRequestID
-
     const supabase = await createServerSupabase()
 
-    // 3. If this is a loan schedule payment, save checkout_request_id on schedule
+    // 3. If this is a loan schedule payment
     if (scheduleId && loanId) {
       await supabase
         .from('loan_schedules')
@@ -37,16 +36,25 @@ export async function POST(req: Request) {
         .eq('id', scheduleId)
     }
 
-    // 4. If this is a contribution payment, save to contributions table
+    // 4. If this is a contribution payment
     if (memberId && chamaId) {
-      await supabase.from('contributions').insert({
-        member_id: memberId,
-        chama_id: chamaId,
-        amount,
-        period: period ?? new Date().toISOString().slice(0, 7),
-        status: 'pending',
-        checkout_request_id: checkoutRequestId,
-      })
+      if (contributionId) {
+        // Update existing contribution with checkout request ID
+        await supabase
+          .from('contributions')
+          .update({ checkout_request_id: checkoutRequestId })
+          .eq('id', contributionId)
+      } else {
+        // Create new contribution record
+        await supabase.from('contributions').insert({
+          member_id: memberId,
+          chama_id: chamaId,
+          amount,
+          period: period ?? new Date().toISOString().slice(0, 7),
+          status: 'pending',
+          checkout_request_id: checkoutRequestId,
+        })
+      }
     }
 
     return NextResponse.json({
