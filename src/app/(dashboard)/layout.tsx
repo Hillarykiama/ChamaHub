@@ -15,6 +15,20 @@ export default async function DashboardLayout({
     redirect('/login')
   }
 
+  const { data: member } = await supabase
+    .from('members')
+    .select('id, full_name, role')
+    .eq('user_id', user!.id)
+    .single()
+
+  const displayName = member?.full_name ?? user!.email ?? 'User'
+  const initials = displayName
+    .split(' ')
+    .map((n: string) => n[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase()
+
   const navItems = [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/members', label: 'Members' },
@@ -39,13 +53,9 @@ export default async function DashboardLayout({
           {/* Brand */}
           <div className="flex items-center gap-3">
             <div style={{
-              width: 32,
-              height: 32,
+              width: 32, height: 32,
               background: 'linear-gradient(135deg, #3B6D11, #639922)',
-              borderRadius: 10,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
+              borderRadius: 10, display: 'flex', alignItems: 'center', justifyContent: 'center',
             }}>
               <div style={{ width: 12, height: 12, borderRadius: '50%', background: '#fff' }} />
             </div>
@@ -58,7 +68,7 @@ export default async function DashboardLayout({
           <div className="flex items-center gap-1">
             {navItems.map((item) => (
               
-                <a key={item.href}
+               < a key={item.href}
                 href={item.href}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-green-700 hover:bg-green-50 transition-colors"
                 style={{ textDecoration: 'none' }}
@@ -70,19 +80,21 @@ export default async function DashboardLayout({
 
           {/* Right side */}
           <div className="flex items-center gap-3">
+            <div style={{ textAlign: 'right' }}>
+              <p style={{ fontSize: 12, fontWeight: 600, color: '#1a2e1a', margin: 0 }}>
+                {member?.full_name ?? 'User'}
+              </p>
+              <p style={{ fontSize: 11, color: '#9ca3af', margin: 0, textTransform: 'capitalize' }}>
+                {member?.role ?? 'member'}
+              </p>
+            </div>
             <div style={{
-              width: 32,
-              height: 32,
-              borderRadius: '50%',
+              width: 34, height: 34, borderRadius: '50%',
               background: 'linear-gradient(135deg, #3B6D11, #639922)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              fontSize: 12,
-              fontWeight: 600,
-              color: '#fff',
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0,
             }}>
-              {user!.email?.[0].toUpperCase()}
+              {initials}
             </div>
             <form action="/api/auth/signout" method="post">
               <button
@@ -94,7 +106,6 @@ export default async function DashboardLayout({
               </button>
             </form>
           </div>
-
         </div>
       </nav>
 
