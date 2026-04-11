@@ -4,12 +4,13 @@ import { NextResponse, type NextRequest } from 'next/server'
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl
 
-  // Skip middleware for static files and API routes
+  // Skip middleware for these paths
   if (
     pathname.startsWith('/_next') ||
     pathname.startsWith('/api') ||
     pathname.includes('.') ||
-    pathname === '/login'
+    pathname === '/login' ||
+    pathname === '/'
   ) {
     return NextResponse.next()
   }
@@ -38,20 +39,22 @@ export async function middleware(request: NextRequest) {
       }
     )
 
-    const { data: { user } } = await supabase.auth.getUser()
+    const { data: { user }, error } = await supabase.auth.getUser()
 
-    if (!user) {
-      const url = request.nextUrl.clone()
-      url.pathname = '/login'
-      return NextResponse.redirect(url)
+    if (error || !user) {
+      // Clear all auth cookies and redirect to login
+      const response = NextResponse.redirect(new URL('/login', request.url))
+      request.cookies.getAll().forEach((cookie) => {
+        if (cookie.name.includes('auth') || cookie.name.includes('sb-')) {
+          response.cookies.delete(cookie.name)
+        }
+      })
+      return response
     }
 
     return supabaseResponse
-  } catch (e) {
-    // If middleware fails, redirect to login
-    const url = request.nextUrl.clone()
-    url.pathname = '/login'
-    return NextResponse.redirect(url)
+  } catch {
+    return NextResponse.redirect(new URL('/login', request.url))
   }
 }
 
