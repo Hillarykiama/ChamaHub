@@ -96,15 +96,14 @@ export default async function DashboardLayout({
             }}>
               {initials}
             </div>
-            <form action="/api/auth/signout" method="post">
-              <button
-                type="submit"
-                className="text-sm text-gray-500 hover:text-gray-900 transition-colors"
-                style={{ background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Inter, sans-serif' }}
-              >
-                Sign out
-              </button>
-            </form>
+           < a href="/signout"
+  style={{
+    fontSize: 13, color: '#6b7280', textDecoration: 'none',
+    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+  }}
+>
+  Sign out
+</a>
           </div>
         </div>
       </nav>
