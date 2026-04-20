@@ -81,7 +81,7 @@ async function AdminDashboard({ supabase, member }: { supabase: any; member: any
             </span>
           </div>
           
-           < a href="/loans"
+            < a href="/loans"
             style={{
               fontSize: 12, fontWeight: 600, color: '#b45309',
               textDecoration: 'none', padding: '6px 14px',
@@ -255,7 +255,7 @@ async function MemberDashboard({ supabase, member }: { supabase: any; member: an
               <p style={{ fontSize: 13, color: '#9ca3af', textAlign: 'center', padding: '20px 0' }}>No active loans</p>
             )}
             
-              < a href="/loans/new"
+             < a  href="/loans/new"
               style={{
                 display: 'block', textAlign: 'center', padding: '8px',
                 background: '#f0fdf4', color: '#3B6D11', borderRadius: 8,
