@@ -29,13 +29,20 @@ export default async function DashboardLayout({
     .slice(0, 2)
     .toUpperCase()
 
-  const navItems = [
+  const isAdmin = ['chairperson', 'treasurer', 'secretary'].includes(member?.role ?? '')
+
+  const navItems = isAdmin ? [
     { href: '/dashboard', label: 'Dashboard' },
     { href: '/members', label: 'Members' },
     { href: '/contributions', label: 'Contributions' },
     { href: '/loans', label: 'Loans' },
     { href: '/meetings', label: 'Meetings' },
     { href: '/reports', label: 'Reports' },
+  ] : [
+    { href: '/dashboard', label: 'Dashboard' },
+    { href: '/contributions', label: 'My contributions' },
+    { href: '/loans', label: 'My loans' },
+    { href: '/meetings', label: 'Meetings' },
   ]
 
   return (
@@ -68,7 +75,7 @@ export default async function DashboardLayout({
           <div className="flex items-center gap-1">
             {navItems.map((item) => (
               
-               < a key={item.href}
+              < a  key={item.href}
                 href={item.href}
                 className="px-3 py-1.5 rounded-lg text-sm font-medium text-gray-500 hover:text-green-700 hover:bg-green-50 transition-colors"
                 style={{ textDecoration: 'none' }}
@@ -96,14 +103,15 @@ export default async function DashboardLayout({
             }}>
               {initials}
             </div>
-           < a href="/signout"
-  style={{
-    fontSize: 13, color: '#6b7280', textDecoration: 'none',
-    cursor: 'pointer', fontFamily: 'Inter, sans-serif',
-  }}
->
-  Sign out
-</a>
+            
+            < a   href="/signout"
+              style={{
+                fontSize: 13, color: '#6b7280', textDecoration: 'none',
+                cursor: 'pointer', fontFamily: 'Inter, sans-serif',
+              }}
+            >
+              Sign out
+            </a>
           </div>
         </div>
       </nav>
